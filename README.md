@@ -1,6 +1,4 @@
-# AvancJava-Kurs
-
-## Avancerad Javaprogrammering, 25 yhp - 2021 VT
+# Avancerad Javaprogrammering, 25 yhp - 2021 VT
 
 - Inlämningsuppgift 1 
 
