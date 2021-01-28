@@ -21,7 +21,7 @@ public class Main {
             String taskSeven = ".*([A-Za-z])\\1{3}.*"; // 4 of the same in a row
             String taskEight = ".*[A-Za-z]{3}[/_][0-9]{3}.*"; // Registration numbers
             String taskNine = ".*\\(([A-Za-z0-9\\s]+)\\).*"; // perfect match to ( ... )
-            String taskTen = ".*(if|for)(\\([A-Za-z0-9\\s].*\\)).*"; // if statement and for loops
+            String taskTen = ".*(if|for)(\\(.*\\)).*"; // if statement and for loops
 
             String myString = "";
             int rowCounter = 1;
