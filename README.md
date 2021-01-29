@@ -6,4 +6,4 @@
 
 - Laboration
 
-- Större inlämningsuppgift
+- Större inlämningsuppgift / Projekt - The Game
