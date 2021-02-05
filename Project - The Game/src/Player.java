@@ -36,7 +36,11 @@ public class Player {
         this.inventory.addItem(item);
     }
 
-    public void removeFromInventory(String item) {
+   /* public void removeFromInventory(String item) {
         this.inventory.dropItem(item);
     }
+*/
+   public void removeFromInventory(String item, String pos) {
+       this.inventory.dropItem(item, pos);
+   }
 }

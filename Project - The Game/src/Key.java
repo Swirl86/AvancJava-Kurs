@@ -1,16 +1,16 @@
-public class Key extends GameObject {
+public class Key { // extends Container? GameObject?
 
     String containerName;
 
     public Key() {
-        this.containerName =  "No Container";
+        this.containerName = "No Container";
     }
 
     public Key(String containerName) {
-        this.containerName =  containerName;
+        this.containerName = containerName;
     }
 
-    public void show(){
-        System.out.println("Key match: " + this.containerName);
+    public String show() {
+        return "Key match: " + this.containerName;
     }
 }

@@ -6,22 +6,24 @@ public class Room {
 
     public Room(String name) {
         this.name = name;
-        this.inventorySize = getRandomSize() + 10; // Fill With some items then add some empty spaces
+        this.inventorySize = getRandomSize() + 10;
         this.inventory = new Inventory(inventorySize);
         this.isLocked = false;
-
         fillRoomInventory();
     }
 
+    // To many items in a room, 5-15?
     public int getRandomSize() {
         return (int) (Math.random() * 10) + 5;
     }
 
     public void fillRoomInventory() {
-        // TODO lägg till några items i container som är låsta samt tillhörande nycklar
+        // Fill With some items and leave some empty spaces
         for (int i = 0; i < this.inventorySize - 10; i++) {
             this.inventory.addRandomItem();
         }
+        // TODO randomizera 1-3 kistor i varje rum
+        // this.inventory.createContainer(); // <-- testa
     }
 
     public String getName() {
@@ -44,19 +46,23 @@ public class Room {
         this.isLocked = isLocked;
     }
 
-    public GameObject getItem(String item) {
-        return  this.inventory.getItemFromInventory(item);
-    }
-
-    public void removeItem(String item) {
-        this.inventory.dropItem(item);
+    public void removeItem(String item, String pos) {
+        this.inventory.dropItem(item, pos);
     }
 
     public void addItem(String item) {
         this.inventory.addItem(item);
     }
 
-   /* public void show() {
+   /* public GameObject getItem(String item) {
+        return this.inventory.getItemFromInventory(item);
+    }
+
+     public boolean isMovable(String item) {
+        return this.inventory.isMovable(item);
+    }
+
+   public void show() {
         System.out.println("Room: " + this.name + "  " + this.inventory);
     }*/
 }

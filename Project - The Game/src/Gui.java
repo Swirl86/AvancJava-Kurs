@@ -1,17 +1,21 @@
 import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.util.Arrays;
 
 public class Gui extends JFrame {
-    private final String[] availableCommans = {"left", "right", "pickup", "drop", "trade", "follow", "1", "2", "3", "4"};
-
+    private final String[] availableCommands = {"left", "right", "pickup", "drop", "trade", "follow"};
     private final Font normalFont = new Font("Times New Roman", Font.PLAIN, 15);
+    private final Font bigFont = new Font("Times New Roman", Font.PLAIN, 18);
+    private final Border lineBorder = BorderFactory.createLineBorder(Color.black);
+    private final Border emptyBorder = BorderFactory.createEmptyBorder(5, 5, 5, 5);
 
     private JPanel mainPanel;
     private JPanel navPanel;
     private JPanel topPanel;
-    private JPanel middelPanel;
+    private JPanel middlePanel;
     private JPanel bottomPanel;
 
     private JTextArea showRoom;
@@ -25,8 +29,6 @@ public class Gui extends JFrame {
 
     private JButton leftButton;
     private JButton rightButton;
-    private JButton pickupButton;
-    private JButton dropButton;
 
     public Gui(){
         this.gotCommand = false;
@@ -42,100 +44,118 @@ public class Gui extends JFrame {
         this.setResizable(false);
     }
 
-    //Returnera det senaste commitade kommandot
-    public String getCommand(){
-        if (this.gotCommand){
+    public String getCommand() {
+        if (this.gotCommand) {
             this.gotCommand = false;
+            setInfoText("Available Commands: pickup itemName     drop itemName\n");
             return this.command;
         }
         //return null;
         return "-1";
     }
 
-    public void setCommand(String command){
-            this.command = command;
-            this.gotCommand = true;
+    // TODO updatera så den stämmer
+    public boolean checkCommand() {
+        return Arrays.asList(availableCommands).contains(this.command);
     }
 
-    public boolean checkCommand(){
-        return Arrays.asList(availableCommans).contains( this.command );
+
+    public void setShowRoom(String roomDescription) {
+        this.showRoom.setText("Room: " + roomDescription);
     }
 
-    //Här kan man updatera respektive fält:
-    public void setShowRoom(String roomDescription){
-        this.showRoom.setText("Room: " + roomDescription );
+    public void setShowPersons(Person person) {
+        this.showPersons.setText(person.showPerson());
     }
-    public void setShowPersons(Person person){
-        this.showPersons.setText(person.toString());
-    }
-    public void setShowInventory(Inventory i){
+
+    public void setShowInventory(Inventory i) {
         this.inventory.setText("Inventory: " + i.toString());
     }
 
     //Add person to room
-    public void setPerson(Person person){
-        this.showPersons.setText(person.toString());
+    public void setPerson(Person person) {
+        this.showPersons.setText(person.showPerson());
     }
 
+    public void setInfoText(String text) {
+        this.infoTextArea.setText(text);
+    }
 
-    public void gotCommand(){
+    public void gotCommand() {
         this.gotCommand = false;
     }
 
-    private void setUpPanel(){
+    private void setUpPanel() {
 
         this.navPanel.add(showPersons);
 
         this.topPanel.add(this.infoTextArea);
 
-        this.middelPanel.add(this.showRoom);
-        this.middelPanel.add(this.inventory);
+        this.middlePanel.add(this.showRoom);
+        this.middlePanel.add(this.inventory);
 
         this.bottomPanel.add(this.input);
         this.bottomPanel.add(this.commitButton);
-        this.bottomPanel.add( this.leftButton);
-        this.bottomPanel.add( this.rightButton);
+        this.bottomPanel.add(this.leftButton);
+        this.bottomPanel.add(this.rightButton);
 
         this.mainPanel.add(this.navPanel);
         this.mainPanel.add(this.topPanel);
-        this.mainPanel.add(this.middelPanel);
+        this.mainPanel.add(this.middlePanel);
         this.mainPanel.add(this.bottomPanel);
     }
-    private void setUpElements(){
+
+    private void setUpElements() {
         this.mainPanel = new JPanel(null);
-        this.navPanel = new JPanel(new GridLayout(1,1));
-        this.navPanel.setBounds(50, 15, 700, 50);;
-        this.topPanel = new JPanel(new GridLayout(1,1));
-        this.topPanel.setBounds(50, 100, 700, 100);
-        this.topPanel.setBackground(Color.gray);
-        this.middelPanel = new JPanel(new GridLayout(1,2));
-        this.middelPanel.setBounds(50, 220, 700, 250);
-        this.bottomPanel = new JPanel(new GridLayout(2,4));
+        this.mainPanel.setBackground(Color.lightGray);
+        this.navPanel = new JPanel(new GridLayout(1, 1));
+        this.navPanel.setBounds(50, 15, 700, 70);
+
+        this.topPanel = new JPanel(new GridLayout(1, 1));
+        this.topPanel.setBounds(50, 100, 700, 130);
+
+        this.middlePanel = new JPanel(new GridLayout(1, 2));
+        this.middlePanel.setBounds(50, 250, 700, 220);
+
+        this.bottomPanel = new JPanel(new GridLayout(2, 4));
         this.bottomPanel.setBounds(50, 490, 700, 150);
 
-        this.infoTextArea = new JTextArea("MAIN TEXT GAME AREA\nCommands: pickup itemName   drop itemName\nComments will be here");
-        this.infoTextArea.setBackground(Color.lightGray);
-        this.infoTextArea.setFont(normalFont);
+        this.infoTextArea = new JTextArea("Available Commands:\npickup itemName      drop itemName\n" +
+                "pickup itemName 2   drop itemName 2\n");
+        this.infoTextArea.setForeground(Color.BLUE);
+        this.infoTextArea.setFont(this.bigFont);
         this.infoTextArea.setLineWrap(true);
-        this.showRoom = new JTextArea("Room: ");
-        this.showRoom.setFont(normalFont);
+        this.infoTextArea.setBorder(getBorder("Information"));
+
+        this.showRoom = new JTextArea();
+        this.showRoom.setFont(this.normalFont);
         this.showRoom.setLineWrap(true);
+        this.showRoom.setBorder(getBorder("Room Information"));
+
         this.showPersons = new JTextArea("Persons");
-        this.showPersons.setFont(normalFont);
+        this.showPersons.setFont(this.normalFont);
         this.showPersons.setLineWrap(true);
+        this.showPersons.setBorder(getBorder("Npc Information"));
+
         this.inventory = new JTextArea("Inventory");
-        this.inventory.setFont(normalFont);
+        this.inventory.setFont(this.normalFont);
         this.inventory.setLineWrap(true);
-        this.input = new JTextField("Give command");
+        this.inventory.setBorder(getBorder("My Inventory"));
+
+        this.input = new JTextField("pickup ");
+        this.input.setFont(this.bigFont);
+        this.input.setBorder(getBorder("Write command"));
+
+        this.infoTextArea.setEditable(false);
         this.showPersons.setEditable(false);
         this.showRoom.setEditable(false);
         this.inventory.setEditable(false);
 
         ActionListener inputListener = e -> {
-            if (e.getSource() == this.commitButton){
+            if (e.getSource() == this.commitButton) {
                 this.command = input.getText();
             } else {
-                this.command =  e.getActionCommand();
+                this.command = e.getActionCommand();
             }
             this.gotCommand = true;
             System.out.println(this.command);
@@ -143,14 +163,22 @@ public class Gui extends JFrame {
 
         input.addActionListener(inputListener);
         this.commitButton = new JButton("Commit");
+        this.commitButton.setFont(this.bigFont);
         this.commitButton.addActionListener(inputListener);
 
         this.leftButton = new JButton("Left");
+        this.leftButton.setFont(this.bigFont);
         this.leftButton.addActionListener(inputListener);
 
         this.rightButton = new JButton("Right");
+        this.rightButton.setFont(this.bigFont);
         this.rightButton.addActionListener(inputListener);
 
+    }
+
+    public CompoundBorder getBorder(String title) {
+        return BorderFactory.createCompoundBorder(BorderFactory.createTitledBorder(this.lineBorder, title),
+                this.emptyBorder);
     }
 
 }
