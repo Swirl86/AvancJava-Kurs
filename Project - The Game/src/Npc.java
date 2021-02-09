@@ -1,6 +1,7 @@
+import java.io.Serializable;
 import java.util.Random;
 
-public abstract class Npc {
+public abstract class Npc implements Serializable {
     private final String[] phrases = {"“Every story needs its hero. . And its villain.”",
             "“Every villain is a hero in his own mind.”", "“I’d buy that for a gold…”",
             "“By my Great Aunt Myrra’s beard!”", "“Bababooy, Bababooy, his head went kablooy.”",
@@ -8,21 +9,43 @@ public abstract class Npc {
 
     protected String name;
     protected String catchPhrase;
+    private Inventory inventory;
 
     protected Npc(String name) {
         this.name = name;
-        this.catchPhrase = getPhrase();
+        this.catchPhrase = getRandomPhrase();
+        this.inventory = new Inventory(1);
+        this.inventory.addRandomItem();
     }
 
-    public String getPhrase() {
-        int i = new Random().nextInt(phrases.length);
-        return phrases[i];
+    public int getNumberOfItems() {
+        return this.inventory.getNumberOfItems();
     }
 
-    protected abstract String getRandomPhrase();
+    public String getRandomPhrase() {
+        int i = new Random().nextInt(this.phrases.length);
+        return this.phrases[i];
+    }
 
-    protected abstract String getNpcName();
+    public void setPhrase(String phrase) {
+        this.catchPhrase = phrase;
+    }
 
-    protected abstract String showPerson();
+    public String getName() {
+        return this.name;
+    }
 
+    public Inventory getInventory() {
+        return this.inventory;
+    }
+
+    public void dropGameObject(GameObject object) {
+        this.inventory.dropGameObject(object);
+    }
+
+    public String toString() {
+        String inventory = this.inventory.isEmpty() ? "nothing " : this.inventory.itemToString();
+        return this.name + " is carrying " + inventory + " "
+                + getRandomPhrase();
+    }
 }

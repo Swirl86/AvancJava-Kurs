@@ -1,46 +1,46 @@
-public class Player {
+import java.io.Serializable;
+
+public class Player implements Serializable {
 
     private Room currentRoom;
     private Inventory inventory;
 
     public Player(int maxSize) {
-        this.currentRoom = new Room("Default");
+        this.currentRoom = new Room(0, "Default", "Default");
         this.inventory = new Inventory(maxSize);
     }
-    public Player(Room room, Inventory inventory) {
-        this.currentRoom = room;
-        this.inventory = inventory;
+
+    public Room getCurrentRoom() {
+        return this.currentRoom;
     }
 
-    public Room getRoom() {
-        return this.currentRoom;
+    public void setCurrentRoom(Room room) {
+        this.currentRoom = room;
     }
 
     public Inventory getInventory() {
         return this.inventory;
     }
 
-    public String getRoomName() {
-        return currentRoom.getName();
+    public int getRoomIndex() {
+        return this.currentRoom.getIndex();
     }
 
-    public void setRoom(Room room) {
-        this.currentRoom = room;
+    public Container getContainer(String container) {
+        return this.inventory.getContainer(container);
     }
 
-    public void setInventory(Inventory inventory) {
-        this.inventory = inventory;
+    /* Shorter rows when fetching inventory values */
+    public boolean gotSpace() {
+        return this.inventory.gotSpace();
     }
 
-    public void addToInventory(String item) {
-        this.inventory.addItem(item);
+    public void addItem(GameObject object) {
+        this.inventory.addItem(object);
     }
 
-   /* public void removeFromInventory(String item) {
-        this.inventory.dropItem(item);
+    public void dropGameObject(GameObject object) {
+        this.inventory.dropGameObject(object);
     }
-*/
-   public void removeFromInventory(String item, String pos) {
-       this.inventory.dropItem(item, pos);
-   }
+
 }

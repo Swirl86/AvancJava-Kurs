@@ -1,16 +1,16 @@
-public class Key { // extends Container? GameObject?
+import java.io.Serializable;
 
-    String containerName;
+public class Key extends GameObject implements Serializable {
 
-    public Key() {
-        this.containerName = "No Container";
+    Container container;
+
+    public Key(String name, boolean movable, Container container) {
+        super(name, movable);
+        this.container = container;
     }
 
-    public Key(String containerName) {
-        this.containerName = containerName;
+    public boolean fit(Container c) {
+        return this.container.getObjetName().equals(c.getObjetName());
     }
 
-    public String show() {
-        return "Key match: " + this.containerName;
-    }
 }

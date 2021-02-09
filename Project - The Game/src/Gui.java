@@ -3,14 +3,19 @@ import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.io.Serializable;
 import java.util.Arrays;
 
-public class Gui extends JFrame {
-    private final String[] availableCommands = {"left", "right", "pickup", "drop", "trade", "follow"};
+public class Gui extends JFrame implements Serializable {
     private final Font normalFont = new Font("Times New Roman", Font.PLAIN, 15);
     private final Font bigFont = new Font("Times New Roman", Font.PLAIN, 18);
     private final Border lineBorder = BorderFactory.createLineBorder(Color.black);
     private final Border emptyBorder = BorderFactory.createEmptyBorder(5, 5, 5, 5);
+    private final String availableommands = "Available Commands:\n" +
+            "pickup itemName    pickup itemName  2       ~~ To pickup the second item with same name. ~~\n" +
+            "drop itemName       drop itemName 2            ~~ To drop the second item with same name. ~~\n" +
+            "open container12     open container12 key12  ~~ The key needs to be in your inventory to use. ~~\n" +
+            "   [ To win you need to find the Teleporter and KeyCard: use Teleporter KeyCard ]";
 
     private JPanel mainPanel;
     private JPanel navPanel;
@@ -34,7 +39,7 @@ public class Gui extends JFrame {
         this.gotCommand = false;
         this.command = "";
         this.setTitle("Game");
-        this.setSize(800, 700);
+        this.setSize(800, 800);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setUpElements();
         setUpPanel();
@@ -47,25 +52,26 @@ public class Gui extends JFrame {
     public String getCommand() {
         if (this.gotCommand) {
             this.gotCommand = false;
-            setInfoText("Available Commands: pickup itemName     drop itemName\n");
+            setInfoText(this.availableommands);
             return this.command;
         }
         //return null;
         return "-1";
     }
 
-    // TODO updatera så den stämmer
-    public boolean checkCommand() {
-        return Arrays.asList(availableCommands).contains(this.command);
-    }
-
-
     public void setShowRoom(String roomDescription) {
         this.showRoom.setText("Room: " + roomDescription);
     }
 
-    public void setShowPersons(Person person) {
-        this.showPersons.setText(person.showPerson());
+    public void setShowPersons(Person[] persons) {
+        String roomNpcInfo = "";
+        for (Person person : persons) {
+            if (person != null) {
+                roomNpcInfo += person.toString() + "\n";
+            }
+        }
+
+        this.showPersons.setText(roomNpcInfo);
     }
 
     public void setShowInventory(Inventory i) {
@@ -74,7 +80,7 @@ public class Gui extends JFrame {
 
     //Add person to room
     public void setPerson(Person person) {
-        this.showPersons.setText(person.showPerson());
+        this.showPersons.setText(person.toString());
     }
 
     public void setInfoText(String text) {
@@ -91,8 +97,12 @@ public class Gui extends JFrame {
 
         this.topPanel.add(this.infoTextArea);
 
-        this.middlePanel.add(this.showRoom);
-        this.middlePanel.add(this.inventory);
+        JScrollPane scroll = new JScrollPane(this.showRoom,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        this.middlePanel.add(scroll);
+        scroll = new JScrollPane(this.inventory,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        this.middlePanel.add(scroll);
 
         this.bottomPanel.add(this.input);
         this.bottomPanel.add(this.commitButton);
@@ -109,19 +119,18 @@ public class Gui extends JFrame {
         this.mainPanel = new JPanel(null);
         this.mainPanel.setBackground(Color.lightGray);
         this.navPanel = new JPanel(new GridLayout(1, 1));
-        this.navPanel.setBounds(50, 15, 700, 70);
+        this.navPanel.setBounds(15, 15, 750, 110);
 
         this.topPanel = new JPanel(new GridLayout(1, 1));
-        this.topPanel.setBounds(50, 100, 700, 130);
+        this.topPanel.setBounds(15, 150, 750, 150);
 
         this.middlePanel = new JPanel(new GridLayout(1, 2));
-        this.middlePanel.setBounds(50, 250, 700, 220);
+        this.middlePanel.setBounds(15, 320, 750, 220);
 
         this.bottomPanel = new JPanel(new GridLayout(2, 4));
-        this.bottomPanel.setBounds(50, 490, 700, 150);
+        this.bottomPanel.setBounds(15, 560, 750, 150);
 
-        this.infoTextArea = new JTextArea("Available Commands:\npickup itemName      drop itemName\n" +
-                "pickup itemName 2   drop itemName 2\n");
+        this.infoTextArea = new JTextArea(this.availableommands);
         this.infoTextArea.setForeground(Color.BLUE);
         this.infoTextArea.setFont(this.bigFont);
         this.infoTextArea.setLineWrap(true);
