@@ -4,13 +4,12 @@ import java.util.Random;
 import java.util.stream.IntStream;
 
 public class Room implements Serializable {
-    private final int MAX_SIZE = 3;
+    private final int NPC_MAX_SIZE = 3;
     private final int index;
     private String roomName;
     private String description;
     private final int inventorySize;
     private Inventory inventory;
-    private boolean isLocked;
     // Keep eye on npc in the room
     private Person[] persons;
     private int nrOfPersonsInRoom;
@@ -21,10 +20,9 @@ public class Room implements Serializable {
         this.description = description;
         this.inventorySize = getRandomSize() + 11;
         this.inventory = new Inventory(this.inventorySize);
-        this.isLocked = false;
-        fillRoomInventory();
+        this.persons = new Person[this.NPC_MAX_SIZE];
 
-        this.persons = new Person[this.MAX_SIZE];
+        fillRoomInventory();
     }
 
     // To many items in a room, 5-15?
@@ -64,7 +62,7 @@ public class Room implements Serializable {
     }
 
     public void addPerson(Person person) {
-        if (this.nrOfPersonsInRoom != this.MAX_SIZE) {
+        if (this.nrOfPersonsInRoom != this.NPC_MAX_SIZE) {
             this.persons[this.nrOfPersonsInRoom++] = person;
         }
     }
@@ -82,7 +80,7 @@ public class Room implements Serializable {
                     .toArray(Person[]::new);
             this.nrOfPersonsInRoom--;
 
-            this.persons = Arrays.copyOf(tmp, this.MAX_SIZE);
+            this.persons = Arrays.copyOf(tmp, this.NPC_MAX_SIZE);
         }
     }
 
@@ -103,16 +101,8 @@ public class Room implements Serializable {
         return this.index;
     }
 
-    public String getRoomName() {
-        return this.roomName;
-    }
-
     public Inventory getInventory() {
         return this.inventory;
-    }
-
-    public String getDescription() {
-        return this.description;
     }
 
     public String toString() {
@@ -120,7 +110,7 @@ public class Room implements Serializable {
                 this.description + " ~~" + "\n" + this.getInventory();
     }
 
-    /* Shorter rows when fetching inventory values */
+    /* Methods to shorten rows when fetching inventory values from Game */
     public Container getContainer(String container) {
         return this.inventory.getContainer(container);
     }
@@ -130,7 +120,7 @@ public class Room implements Serializable {
     }
 
     public void addItem(GameObject object) {
-        this.inventory.addItem(object);
+        this.inventory.addGameObject(object);
     }
 
     public boolean gotSpace() {

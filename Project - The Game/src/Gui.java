@@ -3,19 +3,20 @@ import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
-import java.io.Serializable;
+import java.io.*;
 import java.util.Arrays;
 
-public class Gui extends JFrame implements Serializable {
+public class Gui extends JFrame {
     private final Font normalFont = new Font("Times New Roman", Font.PLAIN, 15);
     private final Font bigFont = new Font("Times New Roman", Font.PLAIN, 18);
     private final Border lineBorder = BorderFactory.createLineBorder(Color.black);
     private final Border emptyBorder = BorderFactory.createEmptyBorder(5, 5, 5, 5);
-    private final String availableommands = "Available Commands:\n" +
+    private final String availableommands =
             "pickup itemName    pickup itemName  2       ~~ To pickup the second item with same name. ~~\n" +
-            "drop itemName       drop itemName 2            ~~ To drop the second item with same name. ~~\n" +
-            "open container12     open container12 key12  ~~ The key needs to be in your inventory to use. ~~\n" +
-            "   [ To win you need to find the Teleporter and KeyCard: use Teleporter KeyCard ]";
+                    "drop itemName       drop itemName 2            ~~ To drop the second item with same name. ~~\n" +
+                    "open container12     open container12 key12  ~~ The key needs to be in your inventory to use. ~~\n" +
+                    "trade 1    ~~ Trade first item in your inventory with an npc at a given position in the room. ~~\n" +
+                    "   [ To win you need to find the Teleporter and KeyCard: use Teleporter KeyCard ]";
 
     private JPanel mainPanel;
     private JPanel navPanel;
@@ -35,7 +36,7 @@ public class Gui extends JFrame implements Serializable {
     private JButton leftButton;
     private JButton rightButton;
 
-    public Gui(){
+    public Gui() {
         this.gotCommand = false;
         this.command = "";
         this.setTitle("Game");

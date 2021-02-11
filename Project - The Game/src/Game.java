@@ -3,14 +3,12 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class Game implements Serializable {
-    private final String[] roomName = {"Sunny Side",
-            "Dark Side", "Foul corner",
-            "Kawaii cafe"};
+    private final String[] roomName = {"Sunny Side", "Dark Side", "Foul corner", "Kawaii cafe"};
     private final String[] roomDescription = {"Bright room with 1 written on the door.",
             "Dark room with 2 written on the door.", "Foul room with 3 written on the door.",
             "Kawaii room with 4 written on the door."};
 
-    private String filenamn = "TheGame";
+    private String filenamn = "TheGame.txt";
 
     private Gui gui;
     private Update updateNpc1;
@@ -40,11 +38,11 @@ public class Game implements Serializable {
         startGame();
     }
 
-    private void startThreads() {
+    public void startThreads() {
         this.pool = new ScheduledThreadPoolExecutor(10);
         this.pool.scheduleAtFixedRate(this.updateNpc1, 0, 15, TimeUnit.SECONDS);
-        this.pool.scheduleAtFixedRate(this.updateNpc2, 8, 15, TimeUnit.SECONDS);
-        this.pool.scheduleAtFixedRate(this.updateNpc3, 15, 15, TimeUnit.SECONDS);
+        this.pool.scheduleAtFixedRate(this.updateNpc2, 5, 15, TimeUnit.SECONDS);
+        this.pool.scheduleAtFixedRate(this.updateNpc3, 10, 15, TimeUnit.SECONDS);
     }
 
     public void addNpcs() {
@@ -64,11 +62,10 @@ public class Game implements Serializable {
         this.gui.setShowRoom(room.toString());
         this.gui.setShowInventory(this.player.getInventory());
         this.rooms[3].addTeleport(); // End game object
-
         addNpcsToRooms();
     }
 
-    private void addNpcsToRooms() {
+    public void addNpcsToRooms() {
         for (Room room : this.rooms) {
             for (Person npc : this.npcs) {
                 if (npc.getPosition() == (room.getIndex() - 1)) {
@@ -79,159 +76,208 @@ public class Game implements Serializable {
     }
 
     public void startGame() {
-        //ReentrantLock lock = new ReentrantLock();
         // Reoccurring variables
         long startTime;
         int index;
         int newRoom;
-        boolean movable;
-        boolean exists;
-        boolean gotSpace;
         String object;
         String position;
         String[] choice;
         String[] commands;
-        GameObject item;
         Container container;
         Key key;
 
         while (this.GameIsOn) {
-            startTime = System.currentTimeMillis(); // Slow down for printouts
             choice = this.gui.getCommand().split("\\s", 2);
 
-            //lock.lock();
             switch (choice[0]) {
                 //TODO Add only lowercase checks
                 case "Left":
-                    index = this.player.getRoomIndex();
+                    index = getIndex();
                     newRoom = index - 1;
                     if (checkAdjoiningRoom(index, newRoom)) {
-                        this.player.setCurrentRoom(this.rooms[newRoom - 1]);
-                        updateRoomAndInventoryGui(this.rooms[newRoom - 1]);
+                        updatePlayerCurrentRoom(this.rooms[newRoom - 1]);
                     } else {
                         this.gui.setInfoText("\n\nThere are no more rooms to the left, go to the right.");
                     }
                     break;
                 case "Right":
-                    index = this.player.getRoomIndex();
+                    index = getIndex();
                     newRoom = index + 1;
                     if (checkAdjoiningRoom(index, newRoom)) {
-                        this.player.setCurrentRoom(this.rooms[newRoom - 1]);
-                        updateRoomAndInventoryGui(this.rooms[newRoom - 1]);
+                        updatePlayerCurrentRoom(this.rooms[newRoom - 1]);
                     } else {
                         this.gui.setInfoText("\n\nThere are no more rooms to the right, go to the left.");
                     }
                     break;
                 case "pickup":
-                    commands = splitCommands(choice[1]);
-                    index = this.player.getRoomIndex();
-                    object = commands[0];
-                    position = commands[1];
+                    try {
+                        commands = splitCommands(choice[1]);
+                        index = getIndex();
+                        object = commands[0];
+                        position = commands[1];
 
-                    movable = this.rooms[index - 1].getInventory().isMovable(object, position);
-                    exists = this.rooms[index - 1].getInventory().itemExists(object, position);
-                    gotSpace = this.player.gotSpace();
-
-                    if (movable && exists && gotSpace) {
-                        item = this.rooms[index - 1].getInventory().getGameObject(object, position);
-                        this.player.addItem(item);
-                        this.rooms[index - 1].getInventory().dropGameObject(item);
-                        updateRoomAndInventoryGui(this.rooms[index - 1]);
-                    } else {
-                        updateInfoTextArea(movable, gotSpace, exists, false);
+                        pickUpAction(index, object, position);
+                    } catch (Exception e) {
+                        this.gui.setInfoText("\nCheck you input!\n" +
+                                "To pickup an item an item there need to be a free space in your inventory.\n" +
+                                "Command to pickup an item: pickup item  or  pickup item 2");
                     }
                     break;
                 case "drop":
-                    commands = splitCommands(choice[1]);
-                    index = this.player.getRoomIndex();
-                    object = commands[0];
-                    position = commands[1];
-                    gotSpace = this.rooms[index - 1].gotSpace();
-                    exists = this.player.getInventory().itemExists(object, position);
+                    try {
+                        commands = splitCommands(choice[1]);
+                        index = getIndex();
+                        object = commands[0];
+                        position = commands[1];
 
-                    if (gotSpace && exists) {
-                        item = this.player.getInventory().getGameObject(object, position);
-                        this.player.dropGameObject(item);
-                        this.rooms[index - 1].addItem(item);
-                        updateRoomAndInventoryGui(this.rooms[index - 1]);
-                    } else if (!gotSpace) {
-                        this.gui.setInfoText("There is no more space in the room. Pickup an item to free up a slot.");
-                    } else {
-                        this.gui.setInfoText("That item does not exist! Check your spelling or choose another item.");
+                        dropAction(index, object, position);
+                    } catch (Exception e) {
+                        this.gui.setInfoText("\nCheck you input!\n" +
+                                "To drop an item an item there need to be a free space in the room.\n" +
+                                "Command to drop an item: drop item  or  drop item 2");
                     }
                     break;
                 case "open":
-                    commands = splitCommandsContainer(choice[1]);
-                    index = this.player.getRoomIndex();
-                    // Is the container in the inventory, room or null
-                    container = checkContainer(index, commands[0]);
+                    try {
+                        commands = splitCommandsContainer(choice[1]);
+                        index = getIndex();
+                        // Is the container in the inventory, room or null
+                        container = checkContainer(index, commands[0]);
 
-                    if (container == null) {
-                        this.gui.setInfoText("That item does not exist! Check your spelling or choose another item.");
-                    } else {
-                        if (container.isLocked()) {
-                            key = this.player.getInventory().getKey(commands[1].trim());
-                            if (key != null && key.fit(container)) {
-                                // Got the Key in the inventory and the command for open with key has been given
-                                openContainer(index, container);
-                            } else {
-                                // Did not give the command for open with key
-                                this.gui.setInfoText("\nThe Container is locked, find the matching Key an pick it up.\n" +
-                                        "You need to have they key in you inventory to use it!\n" +
-                                        "Unlock the container by entering the command: open container key");
-                            }
+                        if (container == null) {
+                            this.gui.setInfoText("That item does not exist! Check your spelling or choose another item.");
                         } else {
-                            // Not locked pickup the item if possible look at pickup case
-                            openContainer(index, container);
+                            testContainerKey(index, commands, container);
                         }
+                    } catch (Exception e) {
+                        this.gui.setInfoText("\nCheck you input!\n" +
+                                "To open a container you need to have the Key in you inventory.\n" +
+                                "Command to open the container: open Container Key");
                     }
                     break;
                 case "use":
-                    commands = splitCommandsContainer(choice[1]);
-                    index = this.player.getRoomIndex();
-                    // Is the container in the inventory, room or null
-                    container = checkContainer(index, commands[0]);
-
-                    if (container == null) {
-                        this.gui.setInfoText("That item does not exist! Check your spelling or choose another item.");
-                    } else {
-                        if (container.isLocked()) {
-                            key = this.player.getInventory().getKey(commands[1].trim());
-                            if (key != null && key.fit(container)) {
-                                // Got the KeyCard in the inventory and the command for use with KeyCard has been given
-                                openContainer(index, container);
-                                this.GameIsOn = false; // Left the game room Victory!
-                            } else {
-                                // Did not give the command to use KeyCard
-                                this.gui.setInfoText("\nYou can not use the teleporter! You need the KeyCard to " +
-                                        "activate emergency teleport protocol.\n" +
-                                        "Find and pickup the KeyCard then enter the following command:\n" +
-                                        "use Teleporter KeyCard");
+                    try {
+                        commands = splitCommandsContainer(choice[1]);
+                        index = getIndex();
+                        // Is the container in the inventory, room or null
+                        container = checkContainer(index, commands[0]);
+                        if (container == null) {
+                            this.gui.setInfoText("That item does not exist! Check your spelling or choose another item.");
+                        } else {
+                            if (container.isLocked()) {
+                                key = this.player.getInventory().getKey(commands[1].trim());
+                                if (key != null && key.fit(container)) {
+                                    // Got the KeyCard in the inventory and the command for use with KeyCard has been given
+                                    openContainer(index, container);
+                                    this.GameIsOn = false; // Left the game room Victory!
+                                } else {
+                                    // Did not give the command to use KeyCard
+                                    this.gui.setInfoText("\nYou can not use the teleporter! You need the KeyCard to " +
+                                            "activate emergency teleport protocol.\n" +
+                                            "Find and pickup the KeyCard then enter the following command:\n" +
+                                            "       use Teleporter KeyCard");
+                                }
                             }
                         }
+                    } catch (Exception e) {
+                        this.gui.setInfoText("\nCheck you input!\n" +
+                                "To use the teleport you need to have the KeyCard in you inventory.\n" +
+                                "Command for use: use Teleporter KeyCard");
                     }
                     break;
                 case "trade":
-                    index = this.player.getRoomIndex();
-                    // TODO fånga upp npc som är i rummet och kolla inventory pausa npc så de inte går
-                    System.out.println("TRADE");
+                    try {
+                        commands = splitCommands(choice[1]);
+                        position = commands[1];
+                        tradeWithNpc(position);
+                    } catch (Exception e) {
+                        this.gui.setInfoText("\nCheck you input!\n" +
+                                "To trade you need to enter trade and position of the npc you want to trade with.\n" +
+                                "Command for trade: trade 1");
+                    }
                     break;
             }
-            //lock.unlock();
-            waitForNextInterval(startTime); // Slow down for printouts
         }
         this.pool.shutdownNow();
         this.gui.setInfoText("\n\n      VICTORY! You have successfully teleported out of the game area!");
     }
 
+    public void updateRoomAndInventoryGui(Room room) {
+        this.updateNpc1.updateInformationOnGui(room);
+        this.updateNpc2.updateInformationOnGui(room);
+        this.updateNpc3.updateInformationOnGui(room);
+    }
 
-    private void openContainer(int index, Container container) {
-        boolean movable = container.getInventory().containerObjectIsMovable();
+    public void updatePlayerCurrentRoom(Room room) {
+        synchronized (this) {
+            this.player.setCurrentRoom(room);
+        }
+        updateRoomAndInventoryGui(room);
+    }
+
+    public synchronized int getIndex() {
+        return this.player.getRoomIndex();
+    }
+
+    public synchronized void dropAction(int index, String object, String position) {
+        boolean gotSpace = this.rooms[index - 1].gotSpace();
+        boolean exists = this.player.getInventory().itemExists(object, position);
+
+        if (gotSpace && exists) {
+            GameObject item = this.player.getInventory().getGameObject(object, position);
+            this.player.dropGameObject(item);
+            this.rooms[index - 1].addItem(item);
+            updateRoomAndInventoryGui(this.rooms[index - 1]);
+        } else if (!gotSpace) {
+            this.gui.setInfoText("There is no more space in the room. Pickup an item to free up a slot.");
+        } else {
+            this.gui.setInfoText("That item does not exist! Check your spelling or choose another item.");
+        }
+    }
+
+    public synchronized void pickUpAction(int index, String object, String position) {
+        boolean movable = this.rooms[index - 1].getInventory().isMovable(object, position);
+        boolean exists = this.rooms[index - 1].getInventory().itemExists(object, position);
+
+        boolean gotSpace = this.player.gotSpace();
+
+        if (movable && exists && gotSpace) {
+            GameObject item = this.rooms[index - 1].getInventory().getGameObject(object, position);
+            this.player.addGameObject(item);
+            this.rooms[index - 1].getInventory().dropGameObject(item);
+            updateRoomAndInventoryGui(this.rooms[index - 1]);
+        } else {
+            updateInfoTextArea(movable, gotSpace, exists, false);
+        }
+    }
+
+    public void testContainerKey(int index, String[] commands, Container container) {
+        Key key;
+        if (container.isLocked()) {
+            key = this.player.getInventory().getKey(commands[1].trim());
+            if (key != null && key.fit(container)) {
+                // Got the Key in the inventory and the command for open with key has been given
+                openContainer(index, container);
+            } else {
+                // Did not give the command for open with key
+                this.gui.setInfoText("\nThe Container is locked, find the matching Key an pick it up.\n" +
+                        "You need to have they key in you inventory to use it!\n" +
+                        "Unlock the container by entering the command: open container key");
+            }
+        } else {
+            // Not locked pickup the item if possible look at pickup case
+            openContainer(index, container);
+        }
+    }
+
+    public void openContainer(int index, Container container) {
+        boolean movable = container.getInventory().containerObjectIsMovable(); // always an item in a container
         boolean gotSpace = this.player.gotSpace();
 
         if (movable && gotSpace) {
-            GameObject item = container.getInventory().getContainerGameObject();
-            this.player.getInventory().addItem(item);
+            GameObject item = container.getInventory().getFirstGameObject();
+            this.player.getInventory().addGameObject(item);
             // TODO add new message that the container is empty instead of deleting it
             this.rooms[index - 1].dropGameObject(item);
             updateRoomAndInventoryGui(this.rooms[index - 1]);
@@ -240,7 +286,7 @@ public class Game implements Serializable {
         }
     }
 
-    private Container checkContainer(int index, String containerName) {
+    public Container checkContainer(int index, String containerName) {
         Container container = this.rooms[index - 1].getContainer(containerName);
         if (container == null) {
             container = this.player.getContainer(containerName);
@@ -248,7 +294,34 @@ public class Game implements Serializable {
         return container;
     }
 
-    private String[] splitCommands(String commands) {
+    public synchronized void tradeWithNpc(String position) {
+        try {
+            int pos = Integer.parseInt(position) - 1;
+            Person[] persons = this.rooms[this.player.getRoomIndex() - 1].getPersonsFromRoom();
+            if (persons[pos].getInventory().getNumberOfItems() != 0) {
+                GameObject itemNpc = persons[pos].getInventory().getFirstGameObject();
+                GameObject itemPlayer = this.player.getInventory().getFirstGameObject();
+                // TODO add boolean top randomize if npc wants to trade or not
+                if (itemNpc != null && itemPlayer != null && !persons[pos].getName().equals("Ghost-Bob")) {
+                    this.player.addGameObject(itemNpc);
+                    persons[pos].dropGameObject(itemNpc);
+                    persons[pos].getInventory().addGameObject(itemPlayer);
+                    this.player.dropGameObject(itemPlayer);
+                    updatePlayerCurrentRoom(this.player.getCurrentRoom());
+                } else {
+                    this.gui.setInfoText("\n" + persons[pos].getName() +
+                            " does not want to trade! Maybe you're not carrying anything?" +
+                            "\n\nOhh . . Also you can not trade with Ghost-Bob . .  He is a ghost!");
+                }
+            } else {
+                this.gui.setInfoText("\n" + persons[pos].getName() + " don't have a item in their inventory!");
+            }
+        } catch (NumberFormatException e) {
+            this.gui.setInfoText("\nNpc position must be a number. . .");
+        }
+    }
+
+    public String[] splitCommands(String commands) {
         String[] returnValues = {"", ""};
         String[] options = commands.split("\\s", 4);
 
@@ -270,7 +343,7 @@ public class Game implements Serializable {
         return returnValues;
     }
 
-    private String[] splitCommandsContainer(String commands) {
+    public String[] splitCommandsContainer(String commands) {
         String[] returnValues = {"", ""};
         String[] options = commands.split("\\s", 3);
         if (options.length == 2) {
@@ -283,12 +356,7 @@ public class Game implements Serializable {
         return returnValues;
     }
 
-    private void updateRoomAndInventoryGui(Room room) {
-        this.gui.setShowInventory(this.player.getInventory());
-        this.gui.setShowRoom(room.toString());
-    }
-
-    private void updateInfoTextArea(boolean movable, boolean gotSpace, boolean exists, boolean isContainer) {
+    public void updateInfoTextArea(boolean movable, boolean gotSpace, boolean exists, boolean isContainer) {
         if (!exists) {
             this.gui.setInfoText("That item does not exist! Check your spelling or choose another item.");
         } else if (!gotSpace) {
@@ -300,7 +368,7 @@ public class Game implements Serializable {
         }
     }
 
-    private boolean checkAdjoiningRoom(int currentRoom, int newRoom) {
+    public boolean checkAdjoiningRoom(int currentRoom, int newRoom) {
         boolean validRoomChange = false;
         if (currentRoom == 1 && newRoom == 2) {
             validRoomChange = true;
@@ -318,21 +386,7 @@ public class Game implements Serializable {
         return (int) (Math.random() * 4);
     }
 
-    private void waitForNextInterval(long startTime) {
-        long currentTime = System.currentTimeMillis();
-        long endTime = startTime + 1000;
-        long delta = endTime - currentTime;
-        if (delta > 0) {
-            try {
-                Thread.sleep(delta);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-
-    public Game load() {
+   /* public Game load() {
         Game game = this;
         try {
             FileInputStream fis = new FileInputStream(this.filenamn);
@@ -347,12 +401,12 @@ public class Game implements Serializable {
 
     public void save() {
         try {
-            FileOutputStream fos = new FileOutputStream(this.filenamn);
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            FileOutputStream fout = new FileOutputStream(this.filenamn);
+            ObjectOutputStream oos = new ObjectOutputStream(fout);
             oos.writeObject(this);
             oos.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+    }*/
 }

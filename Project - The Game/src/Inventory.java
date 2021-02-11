@@ -1,6 +1,7 @@
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Random;
 import java.util.stream.IntStream;
 
 // TODO all hantering sker med streams
@@ -17,28 +18,26 @@ public class Inventory implements Serializable {
     }
 
     public void addRandomItem() {
-        // TODO streama igenom och lägg in filter lägg nytt objekt på första null position
         this.gameObjects[numberOfItems++] = new GameObject();
     }
 
+    // End game item
     public void addTeleport(String name, boolean movable, boolean locked) {
         Container container = new Container(name, movable, locked);
         this.gameObjects[numberOfItems++] = container;
-
-        if (locked) {
-            String keyDigit = name.substring(Math.max(name.length() - 2, 0));
-            String keyName = "KeyCard" + keyDigit;
-            this.gameObjects[numberOfItems++] = new Key(keyName, true, container);
-        }
+        connectKey(name, locked, container, "KeyCard");
     }
 
     public void addContainer(String name, boolean movable, boolean locked) {
         Container container = new Container(name, movable, locked);
         this.gameObjects[numberOfItems++] = container;
+        connectKey(name, locked, container, "Key");
+    }
 
+    public void connectKey(String name, boolean locked, Container container, String key) {
         if (locked) {
             String keyDigit = name.substring(Math.max(name.length() - 2, 0));
-            String keyName = "Key" + keyDigit;
+            String keyName = key + keyDigit;
             this.gameObjects[numberOfItems++] = new Key(keyName, true, container);
         }
     }
@@ -74,12 +73,20 @@ public class Inventory implements Serializable {
                 .orElse(null);
     }
 
-    public GameObject getFirstGameObject() {
-        return this.gameObjects[0];
+    public GameObject getRandomGameObject() {
+        int skipIndex = new Random().nextInt(this.numberOfItems - 1);
+        return Arrays.stream(this.gameObjects)
+                .skip(skipIndex)
+                .findAny()
+                .get();//this.gameObjects[(new Random()).nextInt(this.numberOfItems)];
     }
 
-    public GameObject getContainerGameObject() {
-        return this.gameObjects[0];
+    // Only one space in container and Npc
+    public GameObject getFirstGameObject() {
+        // return this.gameObjects[0];
+        return Arrays.stream(this.gameObjects)
+                .findFirst()
+                .orElse(null);
     }
 
     public boolean containerObjectIsMovable() {
@@ -93,7 +100,7 @@ public class Inventory implements Serializable {
     public boolean isMovable(String item, String pos) {
         boolean isMovable = false;
         GameObject object;
-        try {
+        try { // avoid nullpointerexception
             object = this.getGameObject(item, pos);
             isMovable = this.itemExists(item, pos) && object.isMovable();
         } catch (Exception ignored) {
@@ -106,18 +113,18 @@ public class Inventory implements Serializable {
     }
 
     public boolean itemExists(String object, String pos) {
-        int position = Integer.parseInt(pos);
-        position = position != 0 ? position - 1 : position;
+        int prevPos = Integer.parseInt(pos);
+        prevPos = prevPos != 0 ? prevPos - 1 : prevPos;
 
         return Arrays.stream(this.gameObjects)
-                // will filter out all nulls in the stream avoid nullpointerexception
+                // filter out all nulls in the stream avoid nullpointerexception
                 .filter(Objects::nonNull)
-                .skip(position)
+                .skip(prevPos)
                 .anyMatch(x -> x.getObjetName().equals(object));
     }
 
     // Pickup - add to inventory
-    public void addItem(GameObject object) {
+    public void addGameObject(GameObject object) {
         // TODO streama igenom och lägg in filter lägg nytt objekt på första null position
         this.gameObjects[numberOfItems++] = object;
     }
@@ -173,7 +180,7 @@ public class Inventory implements Serializable {
         return value.toString();
     }
 
-    // For Npc
+    // toString for one item, Npc and container
     public String itemToString() {
         // TODO Gör till stream
         String value = "";

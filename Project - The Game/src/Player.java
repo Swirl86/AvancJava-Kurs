@@ -10,12 +10,12 @@ public class Player implements Serializable {
         this.inventory = new Inventory(maxSize);
     }
 
-    public Room getCurrentRoom() {
-        return this.currentRoom;
-    }
-
     public void setCurrentRoom(Room room) {
         this.currentRoom = room;
+    }
+
+    public Room getCurrentRoom() {
+        return this.currentRoom;
     }
 
     public Inventory getInventory() {
@@ -26,17 +26,17 @@ public class Player implements Serializable {
         return this.currentRoom.getIndex();
     }
 
+    /* Methods to shorten rows when fetching inventory values from Game */
     public Container getContainer(String container) {
         return this.inventory.getContainer(container);
     }
 
-    /* Shorter rows when fetching inventory values */
     public boolean gotSpace() {
         return this.inventory.gotSpace();
     }
 
-    public void addItem(GameObject object) {
-        this.inventory.addItem(object);
+    public void addGameObject(GameObject object) {
+        this.inventory.addGameObject(object);
     }
 
     public void dropGameObject(GameObject object) {

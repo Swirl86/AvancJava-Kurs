@@ -15,47 +15,73 @@ public class Update implements Runnable, Serializable {
         this.rooms = rooms;
         this.currentRoom = this.player.getRoomIndex() - 1;
         this.GameIsOn = gameIsOn;
+
+        updateInformationOnGui(this.rooms[this.currentRoom]);
     }
 
     @Override
     public void run() {
-        //  System.out.println(Thread.currentThread().getName() + " is running!");
-        updateInformationOnGui(this.rooms[this.currentRoom]);
-        int npcPos = -1;
-        int newPos = -1;
-        int action = getRandomNumber();
+        try {
+            int action = getRandomNumber();
 
-        switch (action) {
-            case 0:
-                // Drop item if space
-                actionItem("drop");
-                break;
-            case 1:
-                // pickup item if space
-                actionItem("pickup");
-                break;
-            case 2:
-                // Go left
-                npcPos = this.npc.getPosition();
-                newPos = npcPos - 1;
-                moveNpcToNewRoom(npcPos, newPos);
-                //sleep(5000);
-                break;
-            case 3:
-                // Go Right
-                npcPos = npc.getPosition();
-                newPos = npcPos + 1;
-                moveNpcToNewRoom(npcPos, newPos);
-                break;
-            default:
-                // Hang around in the room
-                System.out.println(this.npc.name + " Hanging around . .  ");
-                sleep(5000);
-                break;
+            switch (action) {
+                case 0:
+                    // Drop item if space
+                    actionItem("drop");
+                    // dropItem();
+                    break;
+                case 1:
+                    // pickup item if space
+                    actionItem("pickup");
+                    //  pickUpItem();
+                    break;
+                case 2:
+                    // Go left
+                    moveAction("left");
+                    //sleep(5000);
+                    break;
+                case 3:
+                    // Go Right
+                    moveAction("right");
+                    break;
+                default:
+                    // Hang around in the room
+                    System.out.println(this.npc.name + " Hanging around . .  ");
+                    sleep(5000);
+                    break;
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+            // e.printStackTrace();
         }
-        //updateInformationOnGui(this.rooms[this.currentRoom]);
     }
 
+    public void moveAction(String action) {
+        int npcPos;
+        switch (action) {
+            case "left":
+                npcPos = this.npc.getPosition();
+                moveNpcToNewRoom(npcPos, (npcPos - 1));
+                break;
+            case "right":
+            default:
+                npcPos = this.npc.getPosition();
+                moveNpcToNewRoom(npcPos, (npcPos + 1));
+                break;
+        }
+    }
+
+    public void moveNpcToNewRoom(int npcPos, int newPos) {
+        if (checkAdjoiningRoom(npcPos, newPos)) {
+            synchronized (this) {
+                this.rooms[npcPos].removePerson(this.npc);
+                this.npc.setPosition(newPos);
+                this.rooms[newPos].addPerson(this.npc);
+                updateInformationOnGui(this.rooms[this.currentRoom]);
+                System.out.println(this.npc.name + " Changed room  " + (npc.getPosition() + 1));
+            }
+        }
+    }
 
     public synchronized void actionItem(String action) {
         switch (action) {
@@ -67,19 +93,19 @@ public class Update implements Runnable, Serializable {
                 dropItem();
                 break;
         }
-        updateInformationOnGui(this.rooms[this.currentRoom]);
+        //updateInformationOnGui(this.rooms[this.currentRoom]);
     }
 
     public void dropItem() {
         int npcPos = this.npc.getPosition();
         boolean gotSpace = this.rooms[npcPos].gotSpace();
         boolean gotItem = this.npc.getNumberOfItems() != 0;
+
         if (gotSpace && gotItem) {
-            // TODO hämta på random position
             GameObject item = this.npc.getInventory().getFirstGameObject();
             this.npc.dropGameObject(item);
-            this.rooms[npcPos].getInventory().addItem(item);
-            //updateInformationOnGui(this.rooms[this.currentRoom]);
+            this.rooms[npcPos].getInventory().addGameObject(item);
+            updateInformationOnGui(this.rooms[this.currentRoom]);
             System.out.println(this.npc.name + " NPC DROP  " + item + "  in room " +
                     (this.npc.getPosition() + 1));
         }
@@ -88,44 +114,36 @@ public class Update implements Runnable, Serializable {
     public void pickUpItem() {
         int npcPos = this.npc.getPosition();
         boolean gotSpace = this.npc.getNumberOfItems() == 0;
-        // TODO hämta på random position
-        boolean movable = this.rooms[npcPos].getInventory().getFirstGameObject().isMovable();
+        boolean movable = this.rooms[npcPos].getInventory().getRandomGameObject().isMovable(); // Nullpoint
+
         if (gotSpace && movable) {
-            GameObject item = this.rooms[npcPos].getInventory().getFirstGameObject();
-            npc.getInventory().addItem(item);
+            GameObject item = this.rooms[npcPos].getInventory().getRandomGameObject();
+            npc.getInventory().addGameObject(item);
             this.rooms[npcPos].getInventory().dropGameObject(item);
-            // updateInformationOnGui(this.rooms[this.currentRoom]);
+            updateInformationOnGui(this.rooms[this.currentRoom]);
             System.out.println(this.npc.name + " NPC PICKUP " + item + " in room " +
                     (this.npc.getPosition() + 1));
         }
     }
 
-    public void moveNpcToNewRoom(int npcPos, int newPos) {
-        if (checkAdjoiningRoom(npcPos, newPos)) {
-            this.rooms[npcPos].removePerson(this.npc);
-            this.npc.setPosition(newPos);
-            this.rooms[newPos].addPerson(this.npc);
-            updateInformationOnGui(this.rooms[this.currentRoom]);
-            System.out.println(this.npc.name + " Changed room  " + (npc.getPosition() + 1));
-        }
-    }
 
-    public synchronized void updateInformationOnGui(Room room) {
+    public void updateInformationOnGui(Room room) {
         updateCurrentRoom();
-        updateNpc();
-        sleep(100);
         if ((room.getIndex() - 1) == this.currentRoom) {
-            this.gui.setShowInventory(this.player.getInventory());
-            this.gui.setShowRoom(room.toString());
+            synchronized (this) {
+                updateNpc();
+                this.gui.setShowInventory(this.player.getInventory());
+                this.gui.setShowRoom(room.toString());
+            }
         }
-
     }
 
     public void updateCurrentRoom() {
         this.currentRoom = this.player.getRoomIndex() - 1;
     }
 
-    private void updateNpc() {
+    public void updateNpc() {
+        // Get all Npc in same room as player
         this.gui.setShowPersons(this.rooms[this.currentRoom].getPersonsFromRoom());
     }
 
@@ -135,7 +153,7 @@ public class Update implements Runnable, Serializable {
         return value;
     }
 
-    private boolean checkAdjoiningRoom(int currentRoom, int newRoom) {
+    public boolean checkAdjoiningRoom(int currentRoom, int newRoom) {
         boolean validRoomChange = false;
         if (currentRoom == 0 && newRoom == 1) {
             validRoomChange = true;

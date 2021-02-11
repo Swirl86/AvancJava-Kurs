@@ -1,13 +1,7 @@
 import java.io.Serializable;
 
 public class Person extends Npc implements Serializable {
-    /*
-    – Gå till ett anliggande rum.
-    – Plocka upp en objekt från det rum hen befinner sig i.
-    – lägga ned ett objekt som hen bär på i rummet.
-    – säga sin unika fras.
-    */
-
+ 
     private int position;
 
     public Person(String name, int startingRoom) {
