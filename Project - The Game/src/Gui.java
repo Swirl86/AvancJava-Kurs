@@ -4,20 +4,25 @@ import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.io.*;
-import java.util.Arrays;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Gui extends JFrame {
+    private static final long serialVersionUID = 6696031872468154516L;
+    private final String fileName = "TheGame.txt";
     private final Font normalFont = new Font("Times New Roman", Font.PLAIN, 15);
     private final Font bigFont = new Font("Times New Roman", Font.PLAIN, 18);
+    private final Font boldFont = new Font("Times New Roman", Font.BOLD, 17);
     private final Border lineBorder = BorderFactory.createLineBorder(Color.black);
     private final Border emptyBorder = BorderFactory.createEmptyBorder(5, 5, 5, 5);
-    private final String availableommands =
-            "pickup itemName    pickup itemName  2       ~~ To pickup the second item with same name. ~~\n" +
-                    "drop itemName       drop itemName 2            ~~ To drop the second item with same name. ~~\n" +
-                    "open container12     open container12 key12  ~~ The key needs to be in your inventory to use. ~~\n" +
-                    "trade 1    ~~ Trade first item in your inventory with an npc at a given position in the room. ~~\n" +
-                    "   [ To win you need to find the Teleporter and KeyCard: use Teleporter KeyCard ]";
+    private final String availableCommands =
+            "pickup itemName    pickup itemName  2          ---  To pickup the second item with same name. --- \n" +
+                    "drop itemName       drop itemName 2               ---  To drop the second item with same name.    --- \n" +
+                    "open container12     open container12 key12     --- The key needs to be in your inventory to use. ---\n" +
+                    "trade 1    --- Trade first item in your inventory with an npc at a given position in the room. --- \n" +
+                    "       [ To win you need to find the Teleporter and KeyCard: use Teleporter KeyCard ]\n" +
+                    "               You can SAVE or LOAD your game by entering: save  or  load";
 
+    private Game game;
     private JPanel mainPanel;
     private JPanel navPanel;
     private JPanel topPanel;
@@ -32,14 +37,14 @@ public class Gui extends JFrame {
     private boolean gotCommand;
     private JButton commitButton;
     private JTextArea infoTextArea;
-
     private JButton leftButton;
     private JButton rightButton;
 
-    public Gui() {
+    public Gui(Game game) {
+        this.game = game;
         this.gotCommand = false;
         this.command = "";
-        this.setTitle("Game");
+        this.setTitle("The Game");
         this.setSize(800, 800);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setUpElements();
@@ -50,14 +55,23 @@ public class Gui extends JFrame {
         this.setResizable(false);
     }
 
+    public void updateFrame() {
+        this.mainPanel.revalidate();
+        this.mainPanel.repaint();
+        setInfoText("\nSuccess! The game has been loaded from " + this.fileName);
+    }
+
     public String getCommand() {
         if (this.gotCommand) {
             this.gotCommand = false;
-            setInfoText(this.availableommands);
+            setInfoText(this.availableCommands);
             return this.command;
         }
-        //return null;
         return "-1";
+    }
+
+    public String getAvailableCommands() {
+        return this.availableCommands;
     }
 
     public void setShowRoom(String roomDescription) {
@@ -79,17 +93,8 @@ public class Gui extends JFrame {
         this.inventory.setText("Inventory: " + i.toString());
     }
 
-    //Add person to room
-    public void setPerson(Person person) {
-        this.showPersons.setText(person.toString());
-    }
-
     public void setInfoText(String text) {
         this.infoTextArea.setText(text);
-    }
-
-    public void gotCommand() {
-        this.gotCommand = false;
     }
 
     private void setUpPanel() {
@@ -118,21 +123,21 @@ public class Gui extends JFrame {
 
     private void setUpElements() {
         this.mainPanel = new JPanel(null);
-        this.mainPanel.setBackground(Color.lightGray);
+        this.mainPanel.setBackground(new Color(62, 181, 157));
         this.navPanel = new JPanel(new GridLayout(1, 1));
-        this.navPanel.setBounds(15, 15, 750, 110);
+        this.navPanel.setBounds(15, 20, 750, 110);
 
         this.topPanel = new JPanel(new GridLayout(1, 1));
-        this.topPanel.setBounds(15, 150, 750, 150);
+        this.topPanel.setBounds(15, 150, 750, 160);
 
         this.middlePanel = new JPanel(new GridLayout(1, 2));
-        this.middlePanel.setBounds(15, 320, 750, 220);
+        this.middlePanel.setBounds(15, 330, 750, 230);
 
         this.bottomPanel = new JPanel(new GridLayout(2, 4));
-        this.bottomPanel.setBounds(15, 560, 750, 150);
+        this.bottomPanel.setBounds(15, 580, 750, 150);
 
-        this.infoTextArea = new JTextArea(this.availableommands);
-        this.infoTextArea.setForeground(Color.BLUE);
+        this.infoTextArea = new JTextArea(this.availableCommands);
+        this.infoTextArea.setForeground(new Color(76, 0, 153));
         this.infoTextArea.setFont(this.bigFont);
         this.infoTextArea.setLineWrap(true);
         this.infoTextArea.setBorder(getBorder("Information"));
@@ -168,7 +173,6 @@ public class Gui extends JFrame {
                 this.command = e.getActionCommand();
             }
             this.gotCommand = true;
-            System.out.println(this.command);
         };
 
         input.addActionListener(inputListener);
@@ -189,6 +193,35 @@ public class Gui extends JFrame {
     public CompoundBorder getBorder(String title) {
         return BorderFactory.createCompoundBorder(BorderFactory.createTitledBorder(this.lineBorder, title),
                 this.emptyBorder);
+    }
+
+    public Game load() {
+        Game game = null;
+        try {
+            FileInputStream fis = new FileInputStream(this.fileName);
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            game = (Game) ois.readObject();
+            ois.close();
+            fis.close();
+        } catch (Exception ignored) {
+        }
+        return game;
+    }
+
+    public boolean save() {
+        boolean saved = false;
+        ReentrantLock lock = new ReentrantLock();
+        lock.lock();
+        try {
+            FileOutputStream fout = new FileOutputStream(this.fileName);
+            ObjectOutputStream oos = new ObjectOutputStream(fout);
+            oos.writeObject(this.game);
+            oos.close();
+            saved = true;
+        } catch (Exception ignored) {
+        }
+        lock.unlock();
+        return saved;
     }
 
 }

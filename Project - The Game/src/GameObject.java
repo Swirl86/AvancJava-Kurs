@@ -2,9 +2,10 @@ import java.io.Serializable;
 import java.util.Random;
 
 public class GameObject implements Serializable {
-    private final String[] availableObjects = {"Healing Potion", "Epic Bag", "Burned Map", "Paper",
-            "Lamp", "Chair", "Epic Armor", "Legendary Armor", "Transmitter", "Dresser", "Excalibur",
-            "Arcanite Bar", "Mystery Bag", "Translator"};
+    private final String[] availableObjects = {"Healing Potion", "Epic Bag", "Burned Map", "Paper", "Rock", "Scissors",
+            "Lamp", "Chair", "Epic Armor", "Legendary Armor", "Transmitter", "Dresser", "Excalibur", "Boomkin Statue",
+            "Arcanite Bar", "Mystery Bag", "Translator", "Thunderfury", "Action Potion", "Shadow Oil", "Sulfuras",
+            "Recipe: Frost~Oil", "Copper Bar", "Thorium Ore", "Unstable Trigger", "Goblin Mortar", "Linen Bandage"};
 
     private String object;
     private boolean movable;
@@ -17,12 +18,6 @@ public class GameObject implements Serializable {
         this.movable = rd.nextBoolean();
     }
 
-    // After picking up an item and drop it again. Because you drop it it is movable
-    public GameObject(String object) {
-        this.object = object;
-        this.movable = true;
-    }
-
     // Constructor for Container creation
     public GameObject(String object, boolean movable) {
         this.object = object;
@@ -31,6 +26,10 @@ public class GameObject implements Serializable {
 
     public String getObjetName() {
         return this.object;
+    }
+
+    public void setObjetName(String object) {
+        this.object = object;
     }
 
     public boolean isMovable() {

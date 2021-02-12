@@ -4,7 +4,6 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.IntStream;
 
-// TODO all hantering sker med streams
 public class Inventory implements Serializable {
 
     private final int MAX_SIZE;
@@ -62,7 +61,7 @@ public class Inventory implements Serializable {
         return this.numberOfItems;
     }
 
-    public GameObject getGameObject(String object, String pos) {
+    public synchronized GameObject getGameObject(String object, String pos) {
         int position = Integer.parseInt(pos);
         position = position != 0 ? position - 1 : position;
 
@@ -73,17 +72,16 @@ public class Inventory implements Serializable {
                 .orElse(null);
     }
 
-    public GameObject getRandomGameObject() {
+    public synchronized GameObject getRandomGameObject() {
         int skipIndex = new Random().nextInt(this.numberOfItems - 1);
         return Arrays.stream(this.gameObjects)
                 .skip(skipIndex)
                 .findAny()
-                .get();//this.gameObjects[(new Random()).nextInt(this.numberOfItems)];
+                .get();
     }
 
     // Only one space in container and Npc
-    public GameObject getFirstGameObject() {
-        // return this.gameObjects[0];
+    public synchronized GameObject getFirstGameObject() {
         return Arrays.stream(this.gameObjects)
                 .findFirst()
                 .orElse(null);
@@ -101,8 +99,10 @@ public class Inventory implements Serializable {
         boolean isMovable = false;
         GameObject object;
         try { // avoid nullpointerexception
-            object = this.getGameObject(item, pos);
-            isMovable = this.itemExists(item, pos) && object.isMovable();
+            synchronized (this) {
+                object = this.getGameObject(item, pos);
+                isMovable = this.itemExists(item, pos) && object.isMovable();
+            }
         } catch (Exception ignored) {
         }
         return isMovable;
@@ -123,66 +123,59 @@ public class Inventory implements Serializable {
                 .anyMatch(x -> x.getObjetName().equals(object));
     }
 
-    // Pickup - add to inventory
-    public void addGameObject(GameObject object) {
-        // TODO streama igenom och lägg in filter lägg nytt objekt på första null position
-        this.gameObjects[numberOfItems++] = object;
+    // Pickup
+    public boolean addGameObject(GameObject object) {
+        boolean success = false;
+        synchronized (this) {
+            try {
+                this.gameObjects[numberOfItems++] = object;
+                success = true;
+            } catch (Exception ignored) {
+            }
+        }
+        return success;
     }
 
-    /*public void dropItem(String object, String pos) {
-        int position = Integer.parseInt(pos);
-        position = position != 0 ? position - 1 : position;
+    public boolean dropGameObject(GameObject object) {
+        boolean success = false;
+        synchronized (this) {
+            try {
+                if (this.numberOfItems != 0) {
+                    int index = IntStream.range(0, this.numberOfItems)
+                            .filter(i -> object.equals(this.gameObjects[i]))
+                            .findFirst()
+                            .orElse(-1);
 
-        if (this.numberOfItems != 0 && itemExists(object, pos)) {
-            int index = IntStream.range(0, this.numberOfItems)
-                    .filter(i -> object.equals(this.gameObjects[i].getObjetName()))
-                    .skip(position)
-                    .findFirst()
-                    .orElse(-1);
+                    GameObject[] tmp = IntStream.range(0, this.gameObjects.length)
+                            .filter(i -> i != index)
+                            .mapToObj(i -> this.gameObjects[i])
+                            .toArray(GameObject[]::new);
+                    this.numberOfItems--;
 
-            GameObject[] tmp = IntStream.range(0, this.gameObjects.length)
-                    .filter(i -> i != index)
-                    .mapToObj(i -> this.gameObjects[i])
-                    .toArray(GameObject[]::new);
-            this.numberOfItems--;
-
-            this.gameObjects = Arrays.copyOf(tmp, this.MAX_SIZE);
+                    this.gameObjects = Arrays.copyOf(tmp, this.MAX_SIZE);
+                    success = true;
+                }
+            } catch (Exception ignored) {
+            }
         }
-    }*/
-
-    public void dropGameObject(GameObject object) {
-        if (this.numberOfItems != 0) {
-            int index = IntStream.range(0, this.numberOfItems)
-                    .filter(i -> object.equals(this.gameObjects[i]))
-                    .findFirst()
-                    .orElse(-1);
-
-            GameObject[] tmp = IntStream.range(0, this.gameObjects.length)
-                    .filter(i -> i != index)
-                    .mapToObj(i -> this.gameObjects[i])
-                    .toArray(GameObject[]::new);
-            this.numberOfItems--;
-
-            this.gameObjects = Arrays.copyOf(tmp, this.MAX_SIZE);
-        }
+        return success;
     }
-
 
     public String toString() {
-        // TODO Gör till stream
         StringBuilder value = new StringBuilder();
-        for (int i = 0; i < this.numberOfItems; i++) {
-            if (i % 3 == 0) {
-                value.append("\n");
+        synchronized (this) {
+            for (int i = 0; i < this.numberOfItems; i++) {
+                if (i % 3 == 0) {
+                    value.append("\n");
+                }
+                value.append(" | ").append(this.gameObjects[i].getObjetName()).append(" | ");
             }
-            value.append(" | ").append(this.gameObjects[i].getObjetName()).append(" | ");
         }
         return value.toString();
     }
 
     // toString for one item, Npc and container
     public String itemToString() {
-        // TODO Gör till stream
         String value = "";
         for (int i = 0; i < this.numberOfItems; i++) {
             if (this.gameObjects[i] != null) {

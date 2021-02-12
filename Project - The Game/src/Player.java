@@ -14,19 +14,23 @@ public class Player implements Serializable {
         this.currentRoom = room;
     }
 
+    public void setInventory(Inventory inventory) {
+        this.inventory = inventory;
+    }
+
     public Room getCurrentRoom() {
         return this.currentRoom;
     }
 
-    public Inventory getInventory() {
+    public synchronized Inventory getInventory() {
         return this.inventory;
     }
 
-    public int getRoomIndex() {
+    /* Methods to shorten code rows when fetching values for Game / Update */
+    public synchronized int getRoomIndex() {
         return this.currentRoom.getIndex();
     }
 
-    /* Methods to shorten rows when fetching inventory values from Game */
     public Container getContainer(String container) {
         return this.inventory.getContainer(container);
     }

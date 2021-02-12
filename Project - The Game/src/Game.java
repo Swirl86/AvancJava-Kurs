@@ -1,48 +1,49 @@
 import java.io.*;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Game implements Serializable {
+    private final String helpCommand = "For command list enter command: help";
     private final String[] roomName = {"Sunny Side", "Dark Side", "Foul corner", "Kawaii cafe"};
     private final String[] roomDescription = {"Bright room with 1 written on the door.",
             "Dark room with 2 written on the door.", "Foul room with 3 written on the door.",
             "Kawaii room with 4 written on the door."};
+    private final String fileName = "TheGame.txt";
 
-    private String filenamn = "TheGame.txt";
-
-    private Gui gui;
-    private Update updateNpc1;
-    private Update updateNpc2;
-    private Update updateNpc3;
+    private transient Gui gui;
+    private transient Update updateNpc1;
+    private transient Update updateNpc2;
+    private transient Update updateNpc3;
+    private transient ScheduledThreadPoolExecutor pool;
     private Player player;
     private Person[] npcs;
     private Room[] rooms;
     boolean GameIsOn = true;
-    ScheduledThreadPoolExecutor pool;
 
 
     public Game() {
-        this.gui = new Gui();
+        this.gui = new Gui(this);
         this.player = new Player(5);
         this.npcs = new Person[3];
         this.rooms = new Room[4];
+
         addNpcs();
         addRooms();
 
         this.updateNpc1 = new Update(this.gui, this.player, this.npcs[0], this.rooms, this.GameIsOn);
         this.updateNpc2 = new Update(this.gui, this.player, this.npcs[1], this.rooms, this.GameIsOn);
         this.updateNpc3 = new Update(this.gui, this.player, this.npcs[2], this.rooms, this.GameIsOn);
-        //updateRoomAndInventoryGui(this.rooms[this.player.getRoomIndex() - 1]);
-
+        updateRoomAndInventoryGui(this.player.getCurrentRoom());
         startThreads();
         startGame();
     }
 
     public void startThreads() {
         this.pool = new ScheduledThreadPoolExecutor(10);
-        this.pool.scheduleAtFixedRate(this.updateNpc1, 0, 15, TimeUnit.SECONDS);
-        this.pool.scheduleAtFixedRate(this.updateNpc2, 5, 15, TimeUnit.SECONDS);
-        this.pool.scheduleAtFixedRate(this.updateNpc3, 10, 15, TimeUnit.SECONDS);
+        this.pool.scheduleAtFixedRate(this.updateNpc1, 1, 15, TimeUnit.SECONDS);
+        this.pool.scheduleAtFixedRate(this.updateNpc2, 5, 12, TimeUnit.SECONDS);
+        this.pool.scheduleAtFixedRate(this.updateNpc3, 7, 10, TimeUnit.SECONDS);
     }
 
     public void addNpcs() {
@@ -58,10 +59,8 @@ public class Game implements Serializable {
 
         int index = (int) (Math.random() * 4);
         this.player.setCurrentRoom(this.rooms[index]);
-        Room room = this.player.getCurrentRoom();
-        this.gui.setShowRoom(room.toString());
-        this.gui.setShowInventory(this.player.getInventory());
-        this.rooms[3].addTeleport(); // End game object
+        index = (int) (Math.random() * 4);
+        this.rooms[index].addTeleport(); // End game object
         addNpcsToRooms();
     }
 
@@ -77,7 +76,6 @@ public class Game implements Serializable {
 
     public void startGame() {
         // Reoccurring variables
-        long startTime;
         int index;
         int newRoom;
         String object;
@@ -117,11 +115,11 @@ public class Game implements Serializable {
                         object = commands[0];
                         position = commands[1];
 
-                        pickUpAction(index, object, position);
-                    } catch (Exception e) {
+                        pickUpItem(index, object, position);
+                    } catch (Exception e) { // Avoid IndexOutofbounds Exception
                         this.gui.setInfoText("\nCheck you input!\n" +
                                 "To pickup an item an item there need to be a free space in your inventory.\n" +
-                                "Command to pickup an item: pickup item  or  pickup item 2");
+                                "Command to pickup an item: pickup item  or  pickup item 2\n" + this.helpCommand);
                     }
                     break;
                 case "drop":
@@ -131,11 +129,12 @@ public class Game implements Serializable {
                         object = commands[0];
                         position = commands[1];
 
-                        dropAction(index, object, position);
-                    } catch (Exception e) {
+                        dropItem(index, object, position);
+                    } catch (Exception e) { // Avoid IndexOutofbounds Exception
                         this.gui.setInfoText("\nCheck you input!\n" +
                                 "To drop an item an item there need to be a free space in the room.\n" +
-                                "Command to drop an item: drop item  or  drop item 2");
+                                "Command to drop an item: drop item  or  drop item 2\n" + this.helpCommand);
+                        ;
                     }
                     break;
                 case "open":
@@ -144,16 +143,17 @@ public class Game implements Serializable {
                         index = getIndex();
                         // Is the container in the inventory, room or null
                         container = checkContainer(index, commands[0]);
-
-                        if (container == null) {
-                            this.gui.setInfoText("That item does not exist! Check your spelling or choose another item.");
+                        if (container == null || isTeleporter(container)) {
+                            this.gui.setInfoText("\nThat item does not exist or it is not a Container!\n" +
+                                    "For Container: open Container Key\n" +
+                                    "For Teleporter:  use Teleporter KeyCard\n" + this.helpCommand);
                         } else {
                             testContainerKey(index, commands, container);
                         }
-                    } catch (Exception e) {
+                    } catch (Exception e) { // Avoid IndexOutofbounds Exception
                         this.gui.setInfoText("\nCheck you input!\n" +
                                 "To open a container you need to have the Key in you inventory.\n" +
-                                "Command to open the container: open Container Key");
+                                "Command to open the container: open Container Key\n" + this.helpCommand);
                     }
                     break;
                 case "use":
@@ -161,10 +161,9 @@ public class Game implements Serializable {
                         commands = splitCommandsContainer(choice[1]);
                         index = getIndex();
                         // Is the container in the inventory, room or null
+                        // Container is the end game object, Teleporter
                         container = checkContainer(index, commands[0]);
-                        if (container == null) {
-                            this.gui.setInfoText("That item does not exist! Check your spelling or choose another item.");
-                        } else {
+                        if (container != null && isTeleporter(container)) {
                             if (container.isLocked()) {
                                 key = this.player.getInventory().getKey(commands[1].trim());
                                 if (key != null && key.fit(container)) {
@@ -173,17 +172,20 @@ public class Game implements Serializable {
                                     this.GameIsOn = false; // Left the game room Victory!
                                 } else {
                                     // Did not give the command to use KeyCard
-                                    this.gui.setInfoText("\nYou can not use the teleporter! You need the KeyCard to " +
-                                            "activate emergency teleport protocol.\n" +
-                                            "Find and pickup the KeyCard then enter the following command:\n" +
-                                            "       use Teleporter KeyCard");
+                                    this.gui.setInfoText("\nYou can not use the teleporter! " +
+                                            "You need the KeyCard to activate emergency teleport protocol.\n" +
+                                            "Teleport out by entering: use Teleporter KeyCard\n" + this.helpCommand);
                                 }
                             }
+                        } else {
+                            this.gui.setInfoText("\nThat item does not exist or is not a Teleporter!\n" +
+                                    "To use the Teleporter enter:  use Teleporter KeyCard\n" +
+                                    this.helpCommand);
                         }
-                    } catch (Exception e) {
+                    } catch (Exception e) { // Avoid IndexOutofbounds Exception
                         this.gui.setInfoText("\nCheck you input!\n" +
                                 "To use the teleport you need to have the KeyCard in you inventory.\n" +
-                                "Command for use: use Teleporter KeyCard");
+                                "Command for use: use Teleporter KeyCard\n" + this.helpCommand);
                     }
                     break;
                 case "trade":
@@ -191,11 +193,38 @@ public class Game implements Serializable {
                         commands = splitCommands(choice[1]);
                         position = commands[1];
                         tradeWithNpc(position);
-                    } catch (Exception e) {
-                        this.gui.setInfoText("\nCheck you input!\n" +
+                    } catch (Exception e) { // Avoid IndexOutofbounds Exception
+                        this.gui.setInfoText("\nCheck you input and that you inventory is not empty!\n" +
                                 "To trade you need to enter trade and position of the npc you want to trade with.\n" +
-                                "Command for trade: trade 1");
+                                "Command for trade: trade 1\n" + this.helpCommand);
                     }
+                    break;
+                case "save":
+                    boolean saved = this.gui.save();
+                    if (saved) {
+                        this.gui.setInfoText("\nSuccess! The game is saved to file " + this.fileName);
+                    } else {
+                        this.gui.setInfoText("\nSomething went wrong! Could not save file " + this.fileName);
+                    }
+                    break;
+                case "load":
+                    ReentrantLock lock = new ReentrantLock();
+                    lock.lock();
+                    Game loadedGame = this.gui.load();
+                    if (loadedGame == null) {
+                        this.gui.setInfoText("\nSomething went wrong! Could not find / load file " + this.fileName);
+                    } else {
+                        this.player.setInventory(loadedGame.player.getInventory());
+                        this.player.setCurrentRoom(loadedGame.player.getCurrentRoom());
+                        this.rooms = loadedGame.rooms;
+                        this.npcs = loadedGame.npcs;
+                        updatePlayerCurrentRoom(this.player.getCurrentRoom());
+                        this.gui.updateFrame();
+                    }
+                    lock.unlock();
+                    break;
+                case "help":
+                    this.gui.setInfoText(this.gui.getAvailableCommands());
                     break;
             }
         }
@@ -210,24 +239,24 @@ public class Game implements Serializable {
     }
 
     public void updatePlayerCurrentRoom(Room room) {
-        synchronized (this) {
-            this.player.setCurrentRoom(room);
-        }
+        this.player.setCurrentRoom(room);
         updateRoomAndInventoryGui(room);
+
     }
 
-    public synchronized int getIndex() {
+    public int getIndex() {
         return this.player.getRoomIndex();
     }
 
-    public synchronized void dropAction(int index, String object, String position) {
-        boolean gotSpace = this.rooms[index - 1].gotSpace();
+    public void dropItem(int index, String object, String position) {
+        // Todo improve checks by catching success or fail directly from inventory class
         boolean exists = this.player.getInventory().itemExists(object, position);
+        boolean gotSpace = this.rooms[index - 1].gotSpace();
 
         if (gotSpace && exists) {
             GameObject item = this.player.getInventory().getGameObject(object, position);
             this.player.dropGameObject(item);
-            this.rooms[index - 1].addItem(item);
+            this.rooms[index - 1].addGameObject(item);
             updateRoomAndInventoryGui(this.rooms[index - 1]);
         } else if (!gotSpace) {
             this.gui.setInfoText("There is no more space in the room. Pickup an item to free up a slot.");
@@ -236,31 +265,38 @@ public class Game implements Serializable {
         }
     }
 
-    public synchronized void pickUpAction(int index, String object, String position) {
-        boolean movable = this.rooms[index - 1].getInventory().isMovable(object, position);
-        boolean exists = this.rooms[index - 1].getInventory().itemExists(object, position);
+    public void pickUpItem(int index, String object, String position) {
+        // Todo improve checks by catching success or fail directly from inventory class
+        // More accurate result e.g. if an npc takes an item before I can these checks will be wrong
 
+        boolean movable = this.rooms[index - 1].isMovable(object, position);
+        boolean exists = this.rooms[index - 1].itemExists(object, position);
         boolean gotSpace = this.player.gotSpace();
 
         if (movable && exists && gotSpace) {
-            GameObject item = this.rooms[index - 1].getInventory().getGameObject(object, position);
+            GameObject item = this.rooms[index - 1].getGameObject(object, position);
             this.player.addGameObject(item);
-            this.rooms[index - 1].getInventory().dropGameObject(item);
+            this.rooms[index - 1].dropGameObject(item);
             updateRoomAndInventoryGui(this.rooms[index - 1]);
         } else {
             updateInfoTextArea(movable, gotSpace, exists, false);
         }
     }
 
+    private boolean isTeleporter(Container container) {
+        return container.getObjetName().matches("Teleporter[0-9]{2}");
+    }
+
     public void testContainerKey(int index, String[] commands, Container container) {
-        Key key;
         if (container.isLocked()) {
-            key = this.player.getInventory().getKey(commands[1].trim());
+            Key key = this.player.getInventory().getKey(commands[1].trim());
             if (key != null && key.fit(container)) {
-                // Got the Key in the inventory and the command for open with key has been given
-                openContainer(index, container);
+                // Got the Key in the inventory and the correct command to open with key has been given
+                if (!isTeleporter(container)) {
+                    openContainer(index, container);
+                }
             } else {
-                // Did not give the command for open with key
+                // Did not give the command to open with key
                 this.gui.setInfoText("\nThe Container is locked, find the matching Key an pick it up.\n" +
                         "You need to have they key in you inventory to use it!\n" +
                         "Unlock the container by entering the command: open container key");
@@ -277,9 +313,10 @@ public class Game implements Serializable {
 
         if (movable && gotSpace) {
             GameObject item = container.getInventory().getFirstGameObject();
-            this.player.getInventory().addGameObject(item);
-            // TODO add new message that the container is empty instead of deleting it
-            this.rooms[index - 1].dropGameObject(item);
+            this.player.addGameObject(item);
+            this.rooms[index - 1].dropGameObject(container);
+            this.gui.setInfoText("\nYou opened the Container and it magically disappeared!\n" +
+                    "But not before you looted the " + item);
             updateRoomAndInventoryGui(this.rooms[index - 1]);
         } else {
             updateInfoTextArea(movable, gotSpace, true, true);
@@ -294,20 +331,22 @@ public class Game implements Serializable {
         return container;
     }
 
-    public synchronized void tradeWithNpc(String position) {
+    public void tradeWithNpc(String position) {
         try {
             int pos = Integer.parseInt(position) - 1;
-            Person[] persons = this.rooms[this.player.getRoomIndex() - 1].getPersonsFromRoom();
+            Person[] persons = this.rooms[getIndex() - 1].getPersonsFromRoom();
             if (persons[pos].getInventory().getNumberOfItems() != 0) {
                 GameObject itemNpc = persons[pos].getInventory().getFirstGameObject();
                 GameObject itemPlayer = this.player.getInventory().getFirstGameObject();
-                // TODO add boolean top randomize if npc wants to trade or not
+                // TODO add boolean to randomize if npc wants to trade or not
                 if (itemNpc != null && itemPlayer != null && !persons[pos].getName().equals("Ghost-Bob")) {
                     this.player.addGameObject(itemNpc);
                     persons[pos].dropGameObject(itemNpc);
                     persons[pos].getInventory().addGameObject(itemPlayer);
                     this.player.dropGameObject(itemPlayer);
                     updatePlayerCurrentRoom(this.player.getCurrentRoom());
+                    this.gui.setInfoText("\n" + persons[pos].getName() +
+                            " traded their " + itemNpc + " for your " + itemPlayer);
                 } else {
                     this.gui.setInfoText("\n" + persons[pos].getName() +
                             " does not want to trade! Maybe you're not carrying anything?" +
@@ -326,10 +365,10 @@ public class Game implements Serializable {
         String[] options = commands.split("\\s", 4);
 
         if (options[options.length - 1].matches("[0-9]+")) {
-            // Last input is position for item
             for (int i = 0; i < options.length - 1; i++) {
                 returnValues[0] += options[i] + " ";
             }
+            // Last input is position for item
             returnValues[1] = options[options.length - 1];
         } else {
             // create split items to one string
@@ -358,13 +397,13 @@ public class Game implements Serializable {
 
     public void updateInfoTextArea(boolean movable, boolean gotSpace, boolean exists, boolean isContainer) {
         if (!exists) {
-            this.gui.setInfoText("That item does not exist! Check your spelling or choose another item.");
+            this.gui.setInfoText("\nThat item does not exist! Check your spelling or choose another item.");
         } else if (!gotSpace) {
-            this.gui.setInfoText("You don't have any space in your inventory. Drop an item to free up a slot.");
+            this.gui.setInfoText("\nYou don't have any space in your inventory. Drop an item to free up a slot.");
         } else if (isContainer) {
-            this.gui.setInfoText("You can not open the Container, it is stuck . . .");
+            this.gui.setInfoText("\nYou can not open the Container, the hinges have rusted shut . . .");
         } else if (!movable) {
-            this.gui.setInfoText("You can not pickup that item, it is stuck . . .");
+            this.gui.setInfoText("\nYou can not pickup that item, it is stuck . . .");
         }
     }
 
@@ -385,28 +424,4 @@ public class Game implements Serializable {
     public int getRandomNumber() {
         return (int) (Math.random() * 4);
     }
-
-   /* public Game load() {
-        Game game = this;
-        try {
-            FileInputStream fis = new FileInputStream(this.filenamn);
-            ObjectInputStream ois = new ObjectInputStream(fis);
-            game = (Game) ois.readObject();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return game;
-    }
-
-    public void save() {
-        try {
-            FileOutputStream fout = new FileOutputStream(this.filenamn);
-            ObjectOutputStream oos = new ObjectOutputStream(fout);
-            oos.writeObject(this);
-            oos.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }*/
 }

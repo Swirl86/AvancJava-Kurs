@@ -10,7 +10,7 @@ public class Room implements Serializable {
     private String description;
     private final int inventorySize;
     private Inventory inventory;
-    // Keep eye on npc in the room
+    // Keep an eye on npc's in the room
     private Person[] persons;
     private int nrOfPersonsInRoom;
 
@@ -25,7 +25,6 @@ public class Room implements Serializable {
         fillRoomInventory();
     }
 
-    // To many items in a room, 5-15?
     public int getRandomSize() {
         return (int) (Math.random() * 10) + 5;
     }
@@ -40,7 +39,7 @@ public class Room implements Serializable {
             if (i != x) {
                 this.inventory.addRandomItem();
             } else {
-                generateContainers();
+                generateContainers(); // TODO catch the matching key and add it to random room
             }
         }
     }
@@ -84,16 +83,16 @@ public class Room implements Serializable {
         }
     }
 
-    public int getNrOfNpcInRoom() {
-        return this.nrOfPersonsInRoom;
-    }
-
     public Person[] getPersonsFromRoom() {
         if (this.nrOfPersonsInRoom == 0) {
+            // Create a ghost so the room don't look so empty.
             this.persons[nrOfPersonsInRoom++] = new Person("Ghost-Bob");
             this.persons[0].setPhrase("I am a ghost. . . I am not here -_- ");
+            GameObject obj = this.persons[0].getInventory().getFirstGameObject();
+            this.persons[0].getInventory().dropGameObject(obj);
+            obj.setObjetName("Ghost-Candy"); // Better Catch Phrase for a ghost
+            this.persons[0].getInventory().addGameObject(obj);
         }
-
         return this.persons;
     }
 
@@ -101,13 +100,8 @@ public class Room implements Serializable {
         return this.index;
     }
 
-    public Inventory getInventory() {
+    public synchronized Inventory getInventory() {
         return this.inventory;
-    }
-
-    public String toString() {
-        return this.index + " - " + this.roomName + "\n~~ " +
-                this.description + " ~~" + "\n" + this.getInventory();
     }
 
     /* Methods to shorten rows when fetching inventory values from Game */
@@ -115,15 +109,33 @@ public class Room implements Serializable {
         return this.inventory.getContainer(container);
     }
 
-    public void dropGameObject(GameObject object) {
-        this.inventory.dropGameObject(object);
+    public synchronized boolean dropGameObject(GameObject object) {
+        return this.inventory.dropGameObject(object);
     }
 
-    public void addItem(GameObject object) {
-        this.inventory.addGameObject(object);
+    public synchronized boolean addGameObject(GameObject object) {
+        return this.inventory.addGameObject(object);
     }
 
-    public boolean gotSpace() {
+    public synchronized boolean gotSpace() {
         return this.inventory.gotSpace();
     }
+
+    public synchronized boolean isMovable(String object, String position) {
+        return this.inventory.isMovable(object, position);
+    }
+
+    public synchronized boolean itemExists(String object, String position) {
+        return this.inventory.itemExists(object, position);
+    }
+
+    public synchronized GameObject getGameObject(String object, String position) {
+        return this.inventory.getGameObject(object, position);
+    }
+
+    public String toString() {
+        return this.index + " - " + this.roomName + "\n~~ " +
+                this.description + " ~~" + "\n" + this.inventory.toString();
+    }
+
 }

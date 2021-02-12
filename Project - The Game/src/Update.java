@@ -1,6 +1,4 @@
-import java.io.Serializable;
-
-public class Update implements Runnable, Serializable {
+public class Update implements Runnable {
     private Gui gui;
     private Player player;
     private Person npc;
@@ -15,88 +13,45 @@ public class Update implements Runnable, Serializable {
         this.rooms = rooms;
         this.currentRoom = this.player.getRoomIndex() - 1;
         this.GameIsOn = gameIsOn;
-
-        updateInformationOnGui(this.rooms[this.currentRoom]);
     }
 
     @Override
     public void run() {
-        try {
-            int action = getRandomNumber();
-
-            switch (action) {
-                case 0:
-                    // Drop item if space
-                    actionItem("drop");
-                    // dropItem();
-                    break;
-                case 1:
-                    // pickup item if space
-                    actionItem("pickup");
-                    //  pickUpItem();
-                    break;
-                case 2:
-                    // Go left
-                    moveAction("left");
-                    //sleep(5000);
-                    break;
-                case 3:
-                    // Go Right
-                    moveAction("right");
-                    break;
-                default:
-                    // Hang around in the room
-                    System.out.println(this.npc.name + " Hanging around . .  ");
-                    sleep(5000);
-                    break;
-            }
-        } catch (Exception e) {
-            System.out.println(e);
-            // e.printStackTrace();
-        }
-    }
-
-    public void moveAction(String action) {
-        int npcPos;
+        int action = getRandomNumber();
+        int npcPos = -1;
         switch (action) {
-            case "left":
+            case 0:
+                // Drop item if space
+                dropItem();
+                break;
+            case 1:
+                // pickup item if space
+                pickUpItem();
+                break;
+            case 2:
+                // Go left
                 npcPos = this.npc.getPosition();
                 moveNpcToNewRoom(npcPos, (npcPos - 1));
                 break;
-            case "right":
-            default:
+            case 3:
+                // Go Right
                 npcPos = this.npc.getPosition();
                 moveNpcToNewRoom(npcPos, (npcPos + 1));
+
                 break;
         }
     }
 
-    public void moveNpcToNewRoom(int npcPos, int newPos) {
+    public synchronized void moveNpcToNewRoom(int npcPos, int newPos) {
         if (checkAdjoiningRoom(npcPos, newPos)) {
-            synchronized (this) {
-                this.rooms[npcPos].removePerson(this.npc);
-                this.npc.setPosition(newPos);
-                this.rooms[newPos].addPerson(this.npc);
-                updateInformationOnGui(this.rooms[this.currentRoom]);
-                System.out.println(this.npc.name + " Changed room  " + (npc.getPosition() + 1));
-            }
+            this.rooms[npcPos].removePerson(this.npc);
+            this.npc.setPosition(newPos);
+            this.rooms[newPos].addPerson(this.npc);
+            updateInformationOnGui(this.rooms[this.currentRoom]);
         }
     }
 
-    public synchronized void actionItem(String action) {
-        switch (action) {
-            case "pickup":
-                pickUpItem();
-                break;
-            case "drop":
-            default:
-                dropItem();
-                break;
-        }
-        //updateInformationOnGui(this.rooms[this.currentRoom]);
-    }
-
-    public void dropItem() {
+    public synchronized void dropItem() {
         int npcPos = this.npc.getPosition();
         boolean gotSpace = this.rooms[npcPos].gotSpace();
         boolean gotItem = this.npc.getNumberOfItems() != 0;
@@ -104,14 +59,12 @@ public class Update implements Runnable, Serializable {
         if (gotSpace && gotItem) {
             GameObject item = this.npc.getInventory().getFirstGameObject();
             this.npc.dropGameObject(item);
-            this.rooms[npcPos].getInventory().addGameObject(item);
+            this.rooms[npcPos].addGameObject(item);
             updateInformationOnGui(this.rooms[this.currentRoom]);
-            System.out.println(this.npc.name + " NPC DROP  " + item + "  in room " +
-                    (this.npc.getPosition() + 1));
         }
     }
 
-    public void pickUpItem() {
+    public synchronized void pickUpItem() {
         int npcPos = this.npc.getPosition();
         boolean gotSpace = this.npc.getNumberOfItems() == 0;
         boolean movable = this.rooms[npcPos].getInventory().getRandomGameObject().isMovable(); // Nullpoint
@@ -119,10 +72,8 @@ public class Update implements Runnable, Serializable {
         if (gotSpace && movable) {
             GameObject item = this.rooms[npcPos].getInventory().getRandomGameObject();
             npc.getInventory().addGameObject(item);
-            this.rooms[npcPos].getInventory().dropGameObject(item);
+            this.rooms[npcPos].dropGameObject(item);
             updateInformationOnGui(this.rooms[this.currentRoom]);
-            System.out.println(this.npc.name + " NPC PICKUP " + item + " in room " +
-                    (this.npc.getPosition() + 1));
         }
     }
 
@@ -130,11 +81,9 @@ public class Update implements Runnable, Serializable {
     public void updateInformationOnGui(Room room) {
         updateCurrentRoom();
         if ((room.getIndex() - 1) == this.currentRoom) {
-            synchronized (this) {
-                updateNpc();
-                this.gui.setShowInventory(this.player.getInventory());
-                this.gui.setShowRoom(room.toString());
-            }
+            updateNpc();
+            this.gui.setShowInventory(this.player.getInventory());
+            this.gui.setShowRoom(room.toString());
         }
     }
 
@@ -148,9 +97,7 @@ public class Update implements Runnable, Serializable {
     }
 
     public int getRandomNumber() {
-        int value = (int) (Math.random() * 6);
-        System.out.println(value + "  " + this.npc.getName());
-        return value;
+        return (int) (Math.random() * 6);
     }
 
     public boolean checkAdjoiningRoom(int currentRoom, int newRoom) {
@@ -167,13 +114,4 @@ public class Update implements Runnable, Serializable {
 
         return validRoomChange;
     }
-
-    public void sleep(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
 }

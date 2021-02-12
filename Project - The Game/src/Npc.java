@@ -46,6 +46,7 @@ public abstract class Npc implements Serializable {
     public String toString() {
         String inventory = this.inventory.isEmpty() ? "nothing " : this.inventory.itemToString();
         return this.name + " is carrying " + inventory + " "
-                + getRandomPhrase();
+                + (this.name.equals("Ghost-Bob") ? this.catchPhrase : getRandomPhrase());
+        // More fun with random phrases, use this.catchPhrase if one don't wants the randomization
     }
 }
